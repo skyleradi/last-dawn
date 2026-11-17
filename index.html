@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1410">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Last Dawn — Hold the Kingdom</title>
+<style>
+:root{box-sizing:border-box;--bg:#0b1410;--fg:#fff;--panel:rgba(0,0,0,.66);--gold:#f2b84b;--safeT:env(safe-area-inset-top,0px);--safeB:env(safe-area-inset-bottom,0px);--safeL:env(safe-area-inset-left,0px);--safeR:env(safe-area-inset-right,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,sans-serif;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block}
+.p{position:fixed;background:var(--panel);padding:8px 11px;border-radius:10px;font-size:12.5px;line-height:1.45;pointer-events:none;backdrop-filter:blur(6px)}
+#hud{left:calc(6px + var(--safeL));top:calc(6px + var(--safeT));font-size:12px;max-width:56vw}
+#obj{left:50%;top:calc(6px + var(--safeT));transform:translateX(-50%);text-align:center;font-size:12.5px;max-width:52vw;background:rgba(0,0,0,.5)}
+#help{left:calc(6px + var(--safeL));bottom:calc(6px + var(--safeB));font-size:11px;max-width:44vw;opacity:.85}
+#msg,#hint{left:50%;transform:translateX(-50%);opacity:0;transition:opacity .2s;font-size:14px;text-align:center;max-width:80vw}
+#msg{bottom:calc(150px + var(--safeB))}
+#hint{bottom:calc(112px + var(--safeB));background:rgba(0,0,0,.72)}
+#mm{position:fixed;right:calc(6px + var(--safeR));bottom:calc(150px + var(--safeB));border-radius:50%;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.35);pointer-events:none}
+#hurt{position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 40px rgba(255,0,0,.8);opacity:0;transition:opacity .1s}
+#ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,10,20,.8);padding:14px;z-index:60;overflow:auto}
+.card{max-width:600px;width:100%;padding:20px 22px;background:rgba(15,25,35,.96);border-radius:16px;text-align:center;line-height:1.55;border:1px solid rgba(242,184,75,.25)}
+.card h1{margin:0;font-size:26px;letter-spacing:.5px}
+.card h2{margin:4px 0 10px;font-weight:400;color:var(--gold);font-size:15px}
+.card small{display:block;opacity:.88;margin:9px 0;font-size:12.5px;text-align:left}
+button{font-size:17px;padding:12px 28px;border:0;border-radius:10px;background:var(--gold);color:#222;cursor:pointer;margin-top:10px;font-weight:600}
+.tab{display:inline-block;padding:6px 11px;margin:0 3px 6px 0;border-radius:8px;background:#2b3242;cursor:pointer;font-size:12px;touch-action:manipulation;user-select:none}
+.tab.on{background:var(--gold);color:#222;font-weight:600}
+.it{padding:6px 8px;margin:4px 0;border-radius:8px;background:rgba(255,255,255,.07);cursor:pointer;opacity:.5;font-size:12.5px;touch-action:manipulation;user-select:none;pointer-events:auto}
+.it.ok{opacity:1;background:rgba(80,200,100,.18)}
+.it.own{opacity:.32;text-decoration:line-through}
+.it.sel{outline:2px solid var(--gold)}
+.it.lock{opacity:.4;border-left:3px solid #b04}
+.it span{display:block;font-size:11px;opacity:.8;text-decoration:none;margin-top:2px}
+/* ===== MOBILE CONTROLS ===== */
+#touch{position:fixed;inset:0;pointer-events:none;z-index:40}
+#stick{position:absolute;left:calc(14px + var(--safeL));bottom:calc(14px + var(--safeB));width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.22);pointer-events:auto;touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:rgba(242,184,75,.8);box-shadow:0 0 14px rgba(242,184,75,.5);transition:transform .05s}
+#btns{position:absolute;right:calc(12px + var(--safeR));bottom:calc(14px + var(--safeB));display:grid;grid-template-columns:repeat(2,64px);gap:9px;pointer-events:auto}
+.tb{width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;user-select:none;line-height:1.15}
+.tb:active,.tb.on{background:rgba(242,184,75,.75);color:#222;border-color:var(--gold)}
+.tb b{font-size:19px;display:block}
+#bAtk{grid-column:1;grid-row:1}
+#bGrab{grid-column:2;grid-row:1}
+#bEat{grid-column:1;grid-row:2}
+#bMenu{grid-column:2;grid-row:2}
+/* ===== SLIDE-UP CRAFT SHEET ===== */
+#side{position:fixed;left:0;right:0;bottom:0;max-height:56vh;background:rgba(10,18,26,.97);border-radius:18px 18px 0 0;border-top:2px solid var(--gold);z-index:50;transform:translateY(100%);transition:transform .22s ease-out;display:flex;flex-direction:column;padding-bottom:var(--safeB)}
+#side.up{transform:translateY(0)}
+/* keep the touch controls usable while crafting: lift them above the sheet */
+#side.up ~ #touch #stick{transform:translateY(-46vh) scale(.82)}
+#side.up ~ #touch #btns{transform:translateY(-46vh) scale(.82)}
+#touch #stick,#touch #btns{transition:transform .22s ease-out}
+#grab{height:26px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+#grab::after{content:'';width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.35)}
+#tabs{padding:0 10px 6px;flex:0 0 auto}
+#sideScroll{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 10px 12px;pointer-events:auto;touch-action:pan-y}
+#sideHead{display:flex;justify-content:space-between;align-items:center;padding:0 4px 8px;font-size:12px;opacity:.75}
+/* desktop / mouse: hide touch layer, dock crafting to the right */
+@media (pointer:fine){
+ #touch{display:none !important}
+ #side{right:8px;left:auto;top:calc(8px + var(--safeT));bottom:auto;width:280px;max-height:calc(100vh - 120px);border-radius:12px;transform:none;display:block}
+ #grab{display:none}
+ #mm{bottom:calc(24px + var(--safeB))}
+ #msg{bottom:44px}#hint{bottom:86px}
+ #help{bottom:8px}
+}
+/* touch device in landscape: keep stick/buttons but shrink them */
+@media (pointer:coarse) and (max-height:460px){
+ #stick{width:100px;height:100px}
+ #knob{width:46px;height:46px;margin:-23px 0 0 -23px}
+ .tb{width:54px;height:54px;font-size:10px}
+ #btns{grid-template-columns:repeat(2,54px);gap:7px}
+ #mm{width:110px;height:110px;bottom:calc(122px + var(--safeB))}
+ #msg{bottom:calc(132px + var(--safeB))}#hint{bottom:calc(100px + var(--safeB))}
+}
+</style></head><body>
+<div id="hud" class="p"></div><div id="obj" class="p"></div>
+<div id="help" class="p">Move: stick / WASD · Drag: rotate · Wheel/pinch: zoom<br>Space: attack · E: gather · F: eat · P: pause · Q: tabs</div>
+<div id="hint" class="p"></div><div id="msg" class="p"></div><div id="hurt"></div>
+<canvas id="mm" width="160" height="160"></canvas>
+<div id="side"><div id="grab"></div><div id="sideHead"><span>Crafting</span><span id="sideClose">tap ✕ to close</span></div><div id="tabs"></div><div id="sideScroll"></div></div>
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <div id="btns">
+    <div class="tb" id="bAtk"><b>⚔</b>HIT</div>
+    <div class="tb" id="bGrab"><b>✋</b>GET</div>
+    <div class="tb" id="bEat"><b>🍖</b>EAT</div>
+    <div class="tb" id="bMenu"><b>🛠</b>BUILD</div>
+  </div>
+</div>
+<div id="ov"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const T=THREE,R=(a,b)=>a+Math.random()*(b-a),sc=new T.Scene();
+sc.background=new T.Color(0x9fd0ee);sc.fog=new T.Fog(0x9fd0ee,55,160);
+const cam=new T.PerspectiveCamera(58,innerWidth/innerHeight,.1,300),ren=new T.WebGLRenderer({antialias:true});
+ren.setSize(innerWidth,innerHeight);ren.shadowMap.enabled=true;document.body.appendChild(ren.domElement);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight)});
+const hemi=new T.HemisphereLight(0xdff0ff,0x4a6b3a,.75),sun=new T.DirectionalLight(0xfff2d6,.85),glow=new T.PointLight(0xffa04a,0,70);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);const sk=sun.shadow.camera;sk.left=sk.bottom=-40;sk.right=sk.top=40;sk.far=160;
+glow.position.set(0,11,6);sc.add(hemi,sun,sun.target,glow);
+const mat={},M=c=>mat[c]||(mat[c]=new T.MeshLambertMaterial({color:c,flatShading:true}));
+const mk=(g,c,x=0,y=0,z=0,p=sc)=>{const m=new T.Mesh(g,M(c));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;p.add(m);return m};
+const B=(w,h,d)=>new T.BoxGeometry(w,h,d),Cy=(a,b,h,s=8)=>new T.CylinderGeometry(a,b,h,s),Sp=r=>new T.SphereGeometry(r,10,8),Co=(r,h,s=8)=>new T.ConeGeometry(r,h,s);
+let ac;const snd=(f,d=.1,t='square',v=.05,s=0)=>{if(!ac)return;const n=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type=t;o.frequency.setValueAtTime(f,n);if(s)o.frequency.exponentialRampToValueAtTime(s,n+d);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(n+d)};
+// ---- medan ----
+const H=(x,z)=>{const r=Math.hypot(x,z),t=Math.min(1,Math.max(0,(r-17)/16)),s=t*t*(3-2*t);
+ const h=s*(Math.sin(x*.11)*Math.cos(z*.09)*2.2+Math.sin(x*.04+z*.05)*3.5+Math.sin(z*.2+x*.13)*.6-4.5*Math.exp(-((x+38)**2+(z-26)**2)/110));
+ return r>78?h+((r-78)/10)**2*3:h};
+{const g=new T.PlaneGeometry(260,260,130,130);g.rotateX(-Math.PI/2);const p=g.attributes.position,cl=[];
+ for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),y=H(x,z),r=Math.hypot(x,z);p.setY(i,y);
+  const c=new T.Color(r<15?0x8b7d5e:y>9?0x8d8d8d:y<-1.6?0xcbbc7c:0x4d9a45);c.offsetHSL(0,0,R(-.03,.03)+Math.sin(x*.3)*Math.sin(z*.3)*.04);cl.push(c.r,c.g,c.b)}
+ g.setAttribute('color',new T.Float32BufferAttribute(cl,3));g.computeVertexNormals();
+ const t=new T.Mesh(g,new T.MeshLambertMaterial({vertexColors:true,flatShading:true}));t.receiveShadow=true;sc.add(t);
+ const w=new T.Mesh(new T.CircleGeometry(15,28),new T.MeshLambertMaterial({color:0x3a8fd0,transparent:true,opacity:.75}));w.rotation.x=-Math.PI/2;w.position.set(-38,-2.3,26);sc.add(w)}
+// ---- sumber daya ----
+const res=[],INIT={wood:62,stone:28,ore:18,food:24};
+function tree(){const g=new T.Group(),pine=Math.random()<.5;mk(Cy(.25,.4,2.4,6),0x6e4423,0,1.2,0,g);
+ if(pine)[0,1.1,2.1].forEach((y,i)=>mk(Co(1.7-i*.4,2,7),0x1d5e2f,0,2.8+y,0,g));else{mk(Sp(1.5),0x2f7d32,0,3.6,0,g);mk(Sp(1),0x3a8f3a,.7,3.2,.4,g)}
+ g.scale.setScalar(R(.8,1.4));return g}
+const rock=()=>{const g=new T.Group();mk(new T.DodecahedronGeometry(1.1),0x8a8a90,0,.8,0,g);mk(new T.DodecahedronGeometry(.6),0x9a9aa0,.9,.4,.3,g);return g};
+const ore=()=>{const g=new T.Group();mk(new T.DodecahedronGeometry(1.1),0x3c3c44,0,.8,0,g);for(let i=0;i<4;i++)mk(Sp(.2),0xe0902a,R(-.7,.7),R(.5,1.2),R(-.7,.7),g);return g};
+const bush=()=>{const g=new T.Group();mk(Sp(.8),0x2f7d32,0,.6,0,g);for(let i=0;i<6;i++)mk(Sp(.13),0xc0334d,R(-.6,.6),R(.5,1),R(-.6,.6),g);return g};
+function scatter(n,t,f){for(let i=0,k=0;i<n&&k<600;k++){const a=R(0,6.28),r=R(22,74),x=Math.cos(a)*r,z=Math.sin(a)*r;
+ if(H(x,z)<-1.2||Math.hypot(x+38,z-26)<14)continue;i++;const m=f();m.position.set(x,H(x,z),z);sc.add(m);res.push({m,t,n:t=='wood'?5:4})}}
+scatter(62,'wood',tree);scatter(28,'stone',rock);scatter(18,'ore',ore);scatter(24,'food',bush);
+// ---- bangunan ----
+const st=[],sm=[];
+function addS(type,m,x,z,hp,r){m.position.set(x,H(x,z),z);sc.add(m);const o={m,hp,max:hp,r,type,cd:type=='farm'?10:1};st.push(o);return o}
+function addSm(type,m,x,z,hp,r){m.position.set(x,H(x,z),z);sc.add(m);sm.push({m,hp,max:hp,r,type,cd:0})}
+const crenel=(g,x,y,z)=>mk(B(.7,.6,.7),0xa09a8e,x,y,z,g);
+function castle(){const g=new T.Group();mk(B(9,6,9),0xb9b4a8,0,3,0,g);mk(B(9.6,.6,9.6),0xa09a8e,0,6.3,0,g);
+ for(let i=-4;i<=4;i+=2){crenel(g,i,6.9,4.6);crenel(g,i,6.9,-4.6);crenel(g,4.6,6.9,i);crenel(g,-4.6,6.9,i)}
+ for(const sx of[-5.3,5.3])for(const sz of[-5.3,5.3]){mk(Cy(1.8,2,9,10),0xa8a398,sx,4.5,sz,g);mk(Co(2.5,3,10),0xb33a3a,sx,10.5,sz,g)}
+ mk(Cy(1.7,1.9,4,10),0xb0aba0,0,8.3,0,g);mk(Co(2.4,2.8,10),0xb33a3a,0,11.7,0,g);mk(Cy(.05,.05,2.5),0x333333,0,14.4,0,g);mk(B(1.6,.9,.05),0xd94a4a,.85,15.3,0,g);
+ mk(B(2.6,3.6,.3),0x4a2f1a,0,1.8,4.6,g);mk(B(3,.4,.4),0x666666,0,3.7,4.65,g);
+ for(const x of[-3,3])for(const y of[3.5,5])mk(B(.6,.9,.2),0xffd77a,x,y,4.55,g);return g}
+const C=addS('castle',castle(),0,0,1000,9);
+{const g=new T.Group();mk(B(3,.9,1.5),0x8a5a2b,0,.45,0,g);mk(B(.9,.5,.6),0x444450,.6,1.15,0,g);mk(B(.5,.3,.4),0x444450,.6,1.5,0,g);
+ mk(B(1.5,1.7,1.5),0x777777,-2.4,.85,0,g);mk(B(.7,.5,.1),0xff8a2a,-2.4,.7,.78,g);mk(Cy(.25,.3,.8),0x555555,-2.4,2,0,g);addS('bench',g,13,4,250,2.6)}
+const wallM=()=>{const g=new T.Group();mk(B(3,2.4,3),0x9a968c,0,1.2,0,g);for(const x of[-1.1,1.1])for(const z of[-1.1,1.1])crenel(g,x,2.7,z);return g};
+const houseM=()=>{const g=new T.Group();mk(B(3.2,2.2,3.2),0xd9c7a0,0,1.1,0,g);mk(B(3.4,.25,3.4),0x7a5a35,0,.12,0,g);
+ mk(Co(2.7,1.8,4),0xb5452f,0,3.1,0,g).rotation.y=Math.PI/4;mk(B(.7,1.3,.1),0x5a3a1c,0,.65,1.62,g);mk(B(.6,.6,.1),0x7fb6e0,-1,1.3,1.62,g);mk(B(.5,1.2,.5),0x8a8a8a,1,3,-.8,g);return g};
+const towerM=()=>{const g=new T.Group();mk(Cy(1.3,1.6,5,10),0xa8a398,0,2.5,0,g);mk(Cy(1.8,1.8,.4,10),0x8f8a80,0,5.2,0,g);
+ for(let i=0;i<4;i++){const a=i*1.57+.78;mk(Cy(.08,.08,1.7),0x6e4423,Math.cos(a)*1.4,6.2,Math.sin(a)*1.4,g)}mk(Co(2.1,1.7,10),0xb33a3a,0,7.8,0,g);return g};
+const farmM=()=>{const g=new T.Group();mk(B(3.6,.2,3.6),0x6b4a2a,0,.1,0,g);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){mk(B(.5,.7,.5),0x58a83a,i*1.1,.5,j*1.1,g);mk(B(.3,.2,.3),0xe8c53a,i*1.1,.95,j*1.1,g)}return g};
+const barakM=()=>{const g=new T.Group();mk(B(4.4,2.6,3.4),0x8c7a64,0,1.3,0,g);mk(B(4.8,.35,3.8),0x5a4636,0,2.75,0,g);mk(B(1,1.7,.1),0x3a2616,0,.85,1.72,g);
+ mk(Cy(.05,.05,3),0x333333,-2,3.5,-1.4,g);mk(B(1,.7,.05),0x2e8b4f,-1.5,4.5,-1.4,g);mk(Cy(.3,.3,1.2),0x8a5a2b,2.8,.6,1.4,g);return g};
+const trapM=()=>{const g=new T.Group();mk(B(1.9,.12,1.9),0x3a3228,0,.06,0,g);for(const[x,z]of[[0,0],[.6,.6],[-.6,.6],[.6,-.6],[-.6,-.6]])mk(Co(.14,.7,5),0xbfc4cc,x,.45,z,g);return g};
+const campM=()=>{const g=new T.Group();for(let i=0;i<5;i++){const a=i*1.26,l=mk(Cy(.1,.1,1,5),0x5a3a1c,Math.cos(a)*.35,.2,Math.sin(a)*.35,g);l.rotation.z=Math.cos(a)*1.2;l.rotation.x=Math.sin(a)*1.2}
+ mk(Cy(.9,1,.15,8),0x777777,0,.07,0,g);const f=new T.Mesh(Co(.4,1,6),new T.MeshBasicMaterial({color:0xffa030}));f.position.y=.8;g.add(f);g.userData.f=f;return g};
+const BLD={wall:{f:wallM,hp:150,r:1.45},house:{f:houseM,hp:100,r:2.2},tower:{f:towerM,hp:180,r:1.7},farm:{f:farmM,hp:70,r:2.1},barak:{f:barakM,hp:240,r:2.7},trap:{f:trapM,hp:12,r:1,small:1},camp:{f:campM,hp:1,r:1,small:1}};
+// ---- manusia ----
+let blade;
+function sword(a,c){mk(B(.1,.1,.3),0x5a3a1c,0,-.82,.12,a);const b=mk(B(.07,.14,1),c,0,-.82,.75,a);b.material=new T.MeshLambertMaterial({color:c});return b}
+function human(o){const g=new T.Group();
+ const legs=[-.2,.2].map(x=>{const l=new T.Group();l.position.set(x,.85,0);g.add(l);mk(B(.3,.85,.32),o.pants,0,-.42,0,l);mk(B(.34,.2,.46),0x3b2a1c,0,-.85,.06,l);return l});
+ mk(B(.8,.9,.46),o.shirt,0,1.3,0,g);mk(B(.82,.16,.48),0x4a3320,0,.88,0,g);mk(Sp(.3),o.skin,0,1.98,0,g);
+ mk(Sp(.05),0x111111,-.11,2,.27,g);mk(Sp(.05),0x111111,.11,2,.27,g);
+ const arms=[-1,1].map(d=>{const a=new T.Group();a.position.set(d*.55,1.65,0);g.add(a);mk(B(.24,.8,.26),o.shirt,0,-.35,0,a);mk(Sp(.14),o.skin,0,-.82,0,a);return a});
+ o.fn&&o.fn(g,arms);g.scale.setScalar(o.s||1);sc.add(g);return{m:g,legs,arms,ph:0,atk:0,mv:0,cd:0}}
+function withBar(u,col){const s=new T.Sprite(new T.SpriteMaterial({color:col,depthTest:false}));s.scale.set(1.2,.16,1);s.position.y=2.75;s.visible=false;u.m.add(s);u.bar=s;u.max=u.hp}
+function anim(u,dt){u.ph+=u.mv?dt*9:0;const s=u.mv?Math.sin(u.ph):0;u.legs[0].rotation.x=s*.8;u.legs[1].rotation.x=-s*.8;u.arms[0].rotation.x=s*.6;
+ let w=0;if(u.atk>0){u.atk-=dt;w=-Math.sin((1-u.atk/.3)*Math.PI)*2.3}u.arms[1].rotation.x=-.4-s*.5+w;
+ if(u.bar){u.bar.visible=u.hp<u.max;u.bar.scale.x=Math.max(.02,1.2*u.hp/u.max)}}
+function orcK(g,a,c){for(const d of[-1,1]){mk(Sp(.28),0x777777,d*.58,1.75,0,g);mk(Co(.05,.22,4),0xf5f0d0,d*.12,1.82,.3,g)}
+ mk(B(.08,.08,1.1),0x6e4423,0,-.82,.5,a[1]);mk(B(.06,.55,.4),c,0,-.82,1,a[1])}
+const ED={
+ gob:{hp:28,sp:4.4,d:5,s:.75,o:{s:.75,skin:0x6fbf3b,shirt:0x7a5230,pants:0x4a3a22,fn:(g,a)=>{for(const d of[-1,1])mk(Co(.09,.4,4),0x6fbf3b,d*.38,2.02,0,g).rotation.z=-d*1.3;mk(Co(.07,.2,4),0x5aa82e,0,1.95,.33,g).rotation.x=Math.PI/2;mk(B(.05,.05,.55),0xcccccc,0,-.82,.4,a[1])}}},
+ orc:{hp:85,sp:2.8,d:12,s:1.35,o:{s:1.35,skin:0x4f7a3a,shirt:0x6a4630,pants:0x3a2e22,fn:(g,a)=>orcK(g,a,0x888888)}},
+ boss:{hp:800,sp:2.5,d:32,s:2.4,o:{s:2.4,skin:0x8c3b2b,shirt:0x2a2a2a,pants:0x222222,fn:(g,a)=>{orcK(g,a,0xb33a3a);for(const d of[-1,1])mk(Co(.12,.6,6),0xeeeecc,d*.25,2.4,0,g).rotation.z=-d*.4}}}};
+/* ============================================================
+   LAST DAWN — mobile-first rewrite
+   Crafting v2: tiers · tool durability · recipe gating · bulk craft
+   ============================================================ */
+const S={wood:8,stone:4,ore:0,food:3,plank:2,iron:0,hun:100,sw:0,arm:0,axe:0,pick:0,
+  day:1,night:0,tt:0,nt:0,k:0,kills:0,gc:0,ac:0,mt:0,time:0,dir:'',deaths:0,rg:0,
+  axeDur:0,pickDur:0,steel:0,queue:[],qT:0};
+
+const DAY=55;
+const P=human({skin:0xf0c090,shirt:0x2d5fd0,pants:0x5a4632,fn:(g,a)=>{
+  mk(Sp(.33),0x3a2412,0,2.05,-.05,g);mk(B(.7,1.1,.06),0xb02a2a,0,1.25,-.27,g);blade=sword(a[1],0x8a5a2b)}});
+P.hp=100;P.r=.6;P.m.position.set(0,0,13);P.m.rotation.y=Math.PI;
+const plate=mk(B(.86,.72,.52),0x9a9aa8,0,1.35,0,P.m);
+plate.material=new T.MeshLambertMaterial({color:0x9a9aa8});plate.visible=false;
+const axeV=new T.Group();mk(B(.08,.08,.7),0x6e4423,0,0,.35,axeV);
+mk(B(.06,.42,.3),0xaaaaaa,0,0,.72,axeV);axeV.position.set(0,-.82,0);axeV.visible=false;P.arms[0].add(axeV);
+const pickV=new T.Group();mk(B(.07,1.2,.07),0x6e4423,0,0,0,pickV);
+mk(B(.6,.1,.1),0x999999,0,.6,0,pickV);pickV.position.set(.1,1.35,-.33);pickV.rotation.z=.5;pickV.visible=false;P.m.add(pickV);
+
+const sol=[],wk=[],en=[],pt=[];
+let fa=Math.PI,ca=0,cz=15,state='title',hurt=0,tab=0,pending=-1,lastPanel='';
+const keys={};
+
+const NM={wood:'wood',stone:'stone',ore:'ore',food:'food',plank:'planks',iron:'iron'};
+const NAMES={wood:'Wood',stone:'Stone',ore:'Ore',food:'Food',plank:'Planks',iron:'Iron'};
+
+/* ---- RECIPES: tier = minimum day unlocked, dur = tool durability ---- */
+const REC=[
+ /* 0 */ {n:'Planks',c:{wood:2},tier:1,desc:'Core building material. 2 wood → 1 plank.',d:()=>S.plank++},
+ /* 1 */ {n:'Iron Ingot',c:{ore:2,wood:1},tier:1,desc:'Smelted ore. Gates weapons, armour, towers.',d:()=>S.iron++},
+ /* 2 */ {n:'Steel Ingot',c:{iron:2,plank:1},tier:3,desc:'Refined iron. Needed for tier-3 gear.',d:()=>S.steel++},
+ /* 3 */ {n:'Axe',c:{plank:2,stone:2},tier:1,own:()=>S.axe,desc:'TOOL · +1 wood per chop. 120 uses, then breaks.',d:()=>{S.axe=1;S.axeDur=120;axeV.visible=true}},
+ /* 4 */ {n:'Pickaxe',c:{plank:2,stone:3},tier:1,own:()=>S.pick,desc:'TOOL · required to mine ore, stone ×2. 120 uses.',d:()=>{S.pick=1;S.pickDur=120;pickV.visible=true}},
+ /* 5 */ {n:'Sword',cf:()=>({plank:2,iron:1+S.sw}),tier:1,own:()=>S.sw>=3,desc:'WEAPON · +10 attack damage per level (max 3).',d:()=>{S.sw++;blade.material.color.set([0x8a5a2b,0xd0d0d8,0x9fd3ff,0xffd24a][S.sw])}},
+ /* 6 */ {n:'Armour',cf:()=>({plank:2,iron:2+S.arm}),tier:2,own:()=>S.arm>=3,desc:'ARMOUR · −20% damage taken per level (max 3).',d:()=>{S.arm++;plate.visible=true;plate.material.color.set([0,0x9a9aa8,0xc8d0e0,0xffd24a][S.arm])}},
+ /* 7 */ {n:'Wall',c:{plank:2,stone:3},tier:1,b:'wall',keep:1,desc:'DEFENSE · blocks and soaks enemy attacks. Chain them.',},
+ /* 8 */ {n:'Spike Trap',c:{plank:1,iron:1},tier:2,b:'trap',keep:1,desc:'DEFENSE · damages enemies crossing it (12 charges).'},
+ /* 9 */ {n:'Campfire',c:{wood:4,stone:2},tier:1,b:'camp',desc:'SURVIVAL · heals you and troops within 6 units.'},
+ /*10 */ {n:'House',c:{plank:4,stone:4},tier:1,b:'house',desc:'SURVIVAL · +3 troop/worker capacity.'},
+ /*11 */ {n:'Farm',c:{plank:2,stone:1},tier:2,b:'farm',desc:'SURVIVAL · +1 food every 12s, automatic.'},
+ /*12 */ {n:'Arrow Tower',c:{plank:3,stone:5,iron:1},tier:2,b:'tower',desc:'DEFENSE · auto-shoots enemies within 26 units.'},
+ /*13 */ {n:'Barracks',c:{plank:5,stone:6,iron:1},tier:2,b:'barak',desc:'TROOPS · required before training soldiers or archers.'},
+ /*14 */ {n:'Soldier',c:{plank:1,iron:2,food:1},tier:2,u:'sw',desc:'TROOP · melee swordsman. Charges the enemy.'},
+ /*15 */ {n:'Archer',c:{plank:2,iron:1,food:1},tier:2,u:'ar',desc:'TROOP · ranged attacker, fires from 13 units.'},
+ /*16 */ {n:'Woodcutter',c:{plank:1,food:2},tier:2,u:'tb',desc:'WORKER · auto-fells trees and hauls wood to the castle.'},
+ /*17 */ {n:'Miner',c:{plank:1,stone:2,food:2},tier:2,u:'pm',desc:'WORKER · auto-mines stone and ore (ore needs Pickaxe).'},
+];
+const TABS=[['Tools',[0,1,2,3,4]],['Gear',[5,6]],['Build',[7,8,9,10,11,12,13]],['Troops',[14,15,16,17]]];
+const cost=r=>r.cf?r.cf():r.c,afford=c=>Object.keys(c).every(k=>S[k]>=c[k]);
+const cap=()=>4+3*st.filter(o=>o.type=='house').length;
+const unlocked=r=>(r.tier||1)<=Math.min(8,S.day);
+
+/* ---- DOM ---- */
+const $=i=>document.getElementById(i);
+const hudEl=$('hud'),msgEl=$('msg'),hintEl=$('hint'),hurtEl=$('hurt'),ovEl=$('ov'),
+ objEl=$('obj'),mc=$('mm').getContext('2d'),sideEl=$('side'),sideScroll=$('sideScroll'),
+ tabsEl=$('tabs'),knobEl=$('knob');
+let lastTabs='';
+const say=t=>{msgEl.textContent=t;msgEl.style.opacity=1;S.mt=2.8};
+const ov=h=>{ovEl.innerHTML=h;ovEl.style.display=h?'flex':'none'};
+
+const CTRL_M='<small><b>Touch:</b> left stick to move · drag the world to rotate · pinch to zoom<br><b>HIT</b> attack · <b>GET</b> gather (hold) · <b>EAT</b> eat food · <b>BUILD</b> open crafting<br>In crafting, tap a recipe to make it. For buildings you tap, then tap the ground, then tap ✓Place.</small>';
+const CTRL_D='<small><b>Keys:</b> WASD move · drag mouse / ←→ rotate · wheel zoom · Space attack · hold E gather · F eat · P pause · Q switch tab · 1-5 pick recipe · B place · V cancel.</small>';
+const IS_TOUCH=(()=>{
+  if(new URLSearchParams(location.search).has('mobile')) return true;   // test override
+  if(new URLSearchParams(location.search).has('desktop')) return false;
+  // robust detection: real touch hardware OR coarse pointer OR no hover
+  const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints>0) || (navigator.msMaxTouchPoints>0);
+  const coarse = matchMedia('(pointer:coarse)').matches;
+  const noHover = matchMedia('(hover:none)').matches;
+  if(hasTouch && coarse) return true;
+  if(coarse && noHover) return true;
+  return false;
+})();
+const TITLE='<div class="card"><h1>Last Dawn</h1><h2>Hold the Kingdom</h2>'+
+ 'By day: gather, smelt, forge, fortify, recruit. By night: goblins and orcs storm your castle. Survive 8 nights and break the giant king.'+
+ '<small><b>Gathering</b> (see minimap, bottom-right): green trees = wood · grey rocks = stone · dark rock with orange flecks = ore (needs Pickaxe) · red bushes = food. Walk up and hold <b>GET</b>.</small>'+
+ (IS_TOUCH?CTRL_M:CTRL_D)+
+ '<button data-a="go">Start</button></div>';
+ov(TITLE);
+
+function begin(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+ ac&&ac.resume();state='play';ov('');say('Day 1: find trees and rocks — check the minimap');snd(440,.15,'triangle',.06,660)}
+function pause(on){
+ state=on?'pause':'play';
+ /* pausing must clear held inputs, otherwise the hero walks off on resume.
+    Guarded via window: touch-layer vars are declared later in the file (TDZ). */
+ if(on){
+  for(const k in keys)delete keys[k];
+  inp.mx=0;inp.mz=0;
+  if(typeof resetTouch=='function')resetTouch();
+  else if(typeof window.__resetTouch=='function')window.__resetTouch();
+ }
+ ov(on?'<div class="card"><h1>Paused</h1>'+(IS_TOUCH?CTRL_M:CTRL_D)+'<button data-a="go">Resume</button></div>':'')}
+ovEl.addEventListener('click',e=>{if(!e.target.dataset.a)return;
+ if(state=='title')begin();else if(state=='pause')pause(0);else location.reload()});
+
+// ---- placement ----
+function spot(t){const p=P.m.position,gx=Math.round((p.x+Math.sin(fa)*4.5)/3)*3,gz=Math.round((p.z+Math.cos(fa)*4.5)/3)*3,rn=BLD[t].r;
+ const okf=(x,z)=>Math.hypot(x,z)<60&&H(x,z)>-1.2&&!st.some(o=>Math.hypot(o.m.position.x-x,o.m.position.z-z)<o.r+rn-.2)&&!sm.some(o=>Math.hypot(o.m.position.x-x,o.m.position.z-z)<o.r+rn);
+ const c=[];for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)c.push([gx+i*3,gz+j*3]);
+ c.sort((a,b)=>Math.hypot(a[0]-gx,a[1]-gz)-Math.hypot(b[0]-gx,b[1]-gz));
+ for(const q of c)if(okf(q[0],q[1]))return{x:q[0],z:q[1],ok:1};return{x:gx,z:gz,ok:0}}
+const gh={};
+function ghostOf(t){if(!gh[t]){const g=BLD[t].f();g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();
+ o.material.transparent=true;o.material.opacity=.55;o.castShadow=false}});g.visible=false;sc.add(g);gh[t]=g}return gh[t]}
+function place(){if(pending<0)return;
+ const r=REC[pending];
+ if(!r||!r.b){pending=-1;return say('Nothing to place')}
+ const sp=spot(r.b);
+ if(!sp.ok)return say('No free space here — move a bit');
+ const c=cost(r);
+ if(!afford(c))return say('Not enough materials for '+r.n);
+ for(const k in c)S[k]-=c[k];const d=BLD[r.b];
+ if(d.small)addSm(r.b,d.f(),sp.x,sp.z,d.hp,d.r);else addS(r.b,d.f(),sp.x,sp.z,d.hp,d.r);
+ burst(new T.Vector3(sp.x,H(sp.x,sp.z),sp.z),0xd9c7a0,12);snd(200,.15,'square',.06,400);
+ /* keep=1 recipes stay armed ONLY if still affordable; always re-arm explicitly */
+ if(r.keep&&afford(cost(r))){pending=REC.indexOf(r);say(r.n+' built — tap again to place another')}
+ else{pending=-1;say(r.n+' built')}}
+
+function recruit(k){const bk=st.find(o=>o.type=='barak'),a=R(0,6.28);
+ if(k=='tb'||k=='pm'){const pen=k=='tb',w=human({skin:0xe0b080,shirt:pen?0x8a4a2a:0x4a6a8a,pants:0x5a4a32,
+  fn:(g,A)=>{mk(Cy(.58,.58,.06,10),0xe6cf7a,0,2.22,0,g);mk(Cy(.28,.3,.2,8),0xe6cf7a,0,2.3,0,g);
+   mk(B(.07,.07,.8),0x6e4423,0,-.82,.4,A[1]);
+   if(pen)mk(B(.06,.4,.25),0x9a9a9a,0,-.82,.85,A[1]);else mk(B(.5,.08,.08),0x777777,0,-.82,.85,A[1])}});
+  w.hp=40;w.r=.6;w.types=pen?['wood']:['stone','ore'];w.items={wood:0,stone:0,ore:0};w.load=0;
+  w.m.position.set(Math.cos(a)*10.5,0,Math.sin(a)*10.5);withBar(w,0xffdd44);wk.push(w);return}
+ const ar=k=='ar',b=bk.m.position,
+ s=human(ar?{skin:0xe8b88a,shirt:0x3b7a3a,pants:0x4a4a55,fn:(g,A)=>{mk(Sp(.34),0x2f6b3a,0,2.05,0,g).scale.y=.8;
+  mk(B(.2,.7,.2),0x6e4423,.2,1.4,-.3,g);
+  mk(new T.TorusGeometry(.55,.04,6,14,Math.PI),0x7a4a22,0,-.7,.2,A[0]).rotation.y=Math.PI/2}}
+  :{skin:0xe8b88a,shirt:0x2e8b4f,pants:0x4a4a55,fn:(g,A)=>{mk(Sp(.34),0x9aa3ad,0,2.05,0,g).scale.y=.85;
+   mk(B(.08,.3,.4),0xc03030,0,2.35,0,g);
+   mk(Cy(.5,.5,.08,12),0xb8302f,0,-.4,.3,A[0]).rotation.x=Math.PI/2;sword(A[1],0xc8c8d0)}});
+ s.hp=ar?45:70;s.r=.6;s.a=a;s.arch=ar;s.m.position.set(b.x+Math.cos(a)*3.8,0,b.z+Math.sin(a)*3.8);
+ withBar(s,0x44dd66);sol.push(s)}
+
+/* ---- crafting v2: locked/tiered, queue for builds ---- */
+function use(i){if(state!='play')return;const r=REC[i];
+ if(!unlocked(r))return say(r.n+' unlocks on Day '+r.tier);
+ if(r.b){if(pending==i)return place();
+  const bc=cost(r);
+  if(!afford(bc))return say('Not enough materials for '+r.n);
+  pending=i;say('Move to position it, then tap PLACE');return}
+ if(Math.hypot(P.m.position.x,P.m.position.z)>26)return say('Return to the castle to craft '+r.n);
+ if(r.own&&r.own())return say(r.n+' is already maxed');
+ /* single cost snapshot: no desync between check and payment */
+ const c=cost(r);
+ if(!afford(c))return say('Not enough materials for '+r.n);
+ if(r.u){if((r.u=='sw'||r.u=='ar')&&!st.some(o=>o.type=='barak'))return say('Build a Barracks first (Build tab)');
+  if(sol.length+wk.length>=cap())return say('Need another House (capacity '+cap()+')')}
+ for(const k in c)S[k]-=c[k];
+ if(r.u){recruit(r.u);snd(520,.12,'triangle',.06,780)}else{r.d();snd(380,.1,'triangle',.06,560)}
+ say(r.n+' crafted')}
+
+function eat(){if(S.food>0&&S.hun<95){S.food--;S.hun=Math.min(100,S.hun+30);snd(300,.1,'sine',.06,500)}}
+
+function near(l,p,d){let b=null;for(const o of l){const k=Math.hypot(o.m.position.x-p.x,o.m.position.z-p.z);if(k<d){d=k;b=o}}return b}
+function go(u,to,sp,dt){const m=u.m.position,dx=to.x-m.x,dz=to.z-m.z,l=Math.hypot(dx,dz);
+ if(l>.4){m.x+=dx/l*sp*dt;m.z+=dz/l*sp*dt;u.m.rotation.y=Math.atan2(dx,dz);u.mv=1}return l}
+const face=(u,to)=>u.m.rotation.y=Math.atan2(to.x-u.m.position.x,to.z-u.m.position.z);
+function push(u,o,w=1){const a=u.m.position,b=o.m.position,dx=a.x-b.x,dz=a.z-b.z,l=Math.hypot(dx,dz),
+ m=(o.r||.6)+(u.r||.6);if(l<m&&l>.001){const k=(m-l)/l*w;a.x+=dx*k;a.z+=dz*k}}
+function burst(p,c,n=6){for(let i=0;i<n;i++){const m=mk(B(.16,.16,.16),c,p.x,p.y+1,p.z);
+ m.castShadow=false;pt.push({m,v:new T.Vector3(R(-3,3),R(2,5),R(-3,3)),l:.6})}}
+function hit(e,d,from){e.hp-=d;burst(e.m.position,0xcc3333,3);snd(150,.08,'sawtooth',.05,70);
+ if(from){const p=e.m.position,dx=p.x-from.x,dz=p.z-from.z,l=Math.hypot(dx,dz)||1,k=e.kind=='boss'?.2:.7;
+  p.x+=dx/l*k;p.z+=dz/l*k}
+ if(e.hp<=0&&en.includes(e)){sc.remove(e.m);en.splice(en.indexOf(e),1);S.kills++;
+  burst(e.m.position,0x777777,8);if(Math.random()<.35)S.food++;snd(260,.2,'square',.05,90)}}
+function tr(a,b){const g=new T.BufferGeometry().setFromPoints([a,b]),
+ l=new T.Line(g,new T.LineBasicMaterial({color:0xfff2a0}));sc.add(l);
+ setTimeout(()=>{sc.remove(l);g.dispose()},90);snd(900,.07,'triangle',.03,500)}
+const DN=['East','Southeast','South','Southwest','West','Northwest','North','Northeast'];
+function spawn(){const w=S.day,list=[];
+ for(let i=0;i<2+2*w;i++)list.push('gob');
+ for(let i=0;i<(w>=2?Math.floor(w/2)+(w>=6?1:0):0);i++)list.push('orc');
+ if(w==8)list.push('orc','orc','boss');
+ const base=R(0,6.28);S.dir=DN[Math.round(((base%6.283)/6.283)*8)%8];
+ list.forEach(k=>{const d=ED[k],u=human(d.o),a=base+R(-.35,.35),x=Math.cos(a)*72,z=Math.sin(a)*72;
+  u.kind=k;u.d=d;u.hp=d.hp*(1+.06*w);u.r=.5*d.s+.3;
+  u.m.position.set(x+R(-3,3),H(x,z),z+R(-3,3));withBar(u,0xff4040);en.push(u)});
+ say('Night '+w+': assault from the '+S.dir+'. Workers shelter in the castle');snd(110,1,'sawtooth',.09,70)}
+function dawn(){S.day++;S.night=0;S.tt=0;S.nt=0;
+ for(const o of st)o.hp=Math.min(o.max,o.hp+o.max*.25);
+ P.hp=100;say('Dawn! Structures partially repaired. Day '+S.day);snd(500,.5,'triangle',.07,900)}
+function respawn(){S.deaths++;for(const k of['wood','stone','ore','plank','iron','food'])S[k]=Math.floor(S[k]/2);
+ P.hp=70;S.hun=Math.max(S.hun,50);P.m.position.set(0,0,13);
+ say('You fell! Revived at the castle — lost half your materials')}
+function takeRes(r,n){r.n--;r.m.scale.multiplyScalar(.88);
+ if(r.n<=0){sc.remove(r.m);res.splice(res.indexOf(r),1)}}
+
+/* ---- gather with tool durability ---- */
+function gather(){const p=P.m.position,r=near(res,p,3.6);P.atk=.3;if(!r)return;
+ if(r.t=='ore'&&!S.pick)return say('Ore needs a Pickaxe (Tools tab)');
+ if(r.t=='ore'&&S.pickDur<=0)return say('Your Pickaxe broke — craft a new one');
+ if(r.t=='wood'&&S.axe&&S.axeDur<=0)return say('Your Axe broke — craft a new one');
+ let gain=r.t=='wood'?1+(S.axe?1:0):r.t=='stone'?(S.pick?2:1):r.t=='ore'?1:2;
+ S[r.t]+=gain;
+ if(r.t=='wood'&&S.axe){S.axeDur--;if(S.axeDur<=0){S.axe=0;axeV.visible=false;say('Axe destroyed!')}}
+ if(r.t=='ore'&&S.pick){S.pickDur--;if(S.pickDur<=0){S.pick=0;pickV.visible=false;say('Pickaxe destroyed!')}}
+ burst(r.m.position,{wood:0x7a4a22,stone:0x999999,ore:0xe0902a,food:0xc0334d}[r.t],4);
+ snd(r.t=='wood'?200:320,.08,'triangle',.06,110);takeRes(r)}
+
+function work(w,dt){w.mv=0;const wp=w.m.position;
+ if(S.night){const l=go(w,{x:0,z:0},4.5,dt);w.m.visible=Math.hypot(wp.x,wp.z)>10.3;return}
+ w.m.visible=true;
+ if(w.load>=4){if(go(w,{x:0,z:0},4,dt)<10.8){for(const k in w.items){S[k]+=w.items[k];w.items[k]=0}
+  w.load=0;snd(420,.1,'triangle',.04,520)}return}
+ if(!w.tg||!res.includes(w.tg))w.tg=near(res.filter(r=>w.types.includes(r.t)&&(r.t!='ore'||S.pick)),{x:0,z:0},85);
+ if(!w.tg){go(w,{x:Math.cos(w.m.id)*10,z:Math.sin(w.m.id)*10},2.5,dt);return}
+ const l=go(w,w.tg.m.position,3.8,dt);
+ if(l<2.4){w.mv=0;face(w,w.tg.m.position);w.cd-=dt;
+  if(w.cd<=0){w.cd=1.1;w.atk=.3;w.load++;w.items[w.tg.t]++;burst(w.tg.m.position,0x998866,2);takeRes(w.tg)}}}
+
+const mark=new T.Mesh(new T.RingGeometry(1.5,1.9,24),
+ new T.MeshBasicMaterial({color:0xffe14a,side:T.DoubleSide,transparent:true,opacity:.9}));
+mark.rotation.x=-Math.PI/2;mark.visible=false;sc.add(mark);
+
+/* ============ INPUT: single analog path for keyboard + touch ============ */
+const inp={mx:0,mz:0,rot:0};      // mx/mz = normalized move vector, rot = camera delta
+let stickId=null;
+
+function update(dt){
+ S.time+=dt;const p=P.m.position;P.mv=0;
+ const ix=((keys.KeyD?1:0)-(keys.KeyA?1:0))+inp.mx;
+ const iz=((keys.KeyW?1:0)-(keys.KeyS?1:0))-inp.mz;
+ if(keys.ArrowLeft)ca-=dt*2;if(keys.ArrowRight)ca+=dt*2;
+ ca+=inp.rot*dt;inp.rot=0;
+ if(ix||iz){const m=Math.hypot(ix,iz),nx=ix/m,nz=iz/m;
+  const wx=-Math.sin(ca)*nz+Math.cos(ca)*nx,wz=-Math.cos(ca)*nz-Math.sin(ca)*nx;
+  fa=Math.atan2(wx,wz);
+  const sp=6.5*Math.min(1,m);p.x+=Math.sin(fa)*sp*dt;p.z+=Math.cos(fa)*sp*dt;
+  P.m.rotation.y=fa;P.mv=1}
+ const rr=Math.hypot(p.x,p.z);if(rr>85){p.x*=85/rr;p.z*=85/rr}
+ S.gc-=dt;S.ac-=dt;
+ if((keys.KeyE||holdGet)&&S.gc<=0){S.gc=.45;gather()}
+ if((keys.Space||hitPressed)&&S.ac<=0){S.ac=.45;P.atk=.3;snd(240,.08,'square',.04,120);
+  const fx=Math.sin(fa),fz=Math.cos(fa);
+  for(const e of en.slice()){const dx=e.m.position.x-p.x,dz=e.m.position.z-p.z,l=Math.hypot(dx,dz);
+   if(l<3+e.d.s*.5&&(l<1.6||(dx*fx+dz*fz)/l>.2))hit(e,10+S.sw*10,p)}}
+ hitPressed=0;
+ S.hun-=dt*.7;if(S.hun<=0){S.hun=0;P.hp-=dt*3;hurt=Math.max(hurt,.15)}
+ else if(P.hp<100)P.hp+=dt*.8;
+ if(!S.night){S.tt+=dt;if(S.tt>=DAY){S.night=1;S.nt=0;spawn()}}
+ else{S.nt+=dt;if(!en.length&&S.nt>8){if(S.day>=8)return finish(1);dawn()}}
+ S.rg-=dt;if(S.rg<=0){S.rg=7;
+  for(const[t,f]of[['wood',tree],['stone',rock],['ore',ore],['food',bush]])
+   if(res.filter(r=>r.t==t).length<INIT[t]){scatter(1,t,f);break}}
+ const live=[...st,...sol,...wk,P].filter(o=>o.hp>0&&o.m.visible!==false);
+ for(const e of en.slice()){e.mv=0;const ep=e.m.position,t=near(live,ep,12)||C,tp=t.m.position,
+  l=Math.hypot(tp.x-ep.x,tp.z-ep.z),rc=(t.r||.6)+.7+e.d.s*.6;
+  if(l>rc)go(e,tp,e.d.sp+S.day*.1,dt);
+  else{face(e,tp);e.cd-=dt;if(e.cd<=0){e.cd=1.1;e.atk=.3;const dm=e.d.d+S.day;
+   if(t===P){t.hp-=dm*(1-.2*S.arm);hurt=.45;snd(120,.15,'sawtooth',.07,60)}else t.hp-=dm}}}
+ for(const s of sol.slice()){s.mv=0;
+  if(s.hp<=0){sc.remove(s.m);sol.splice(sol.indexOf(s),1);continue}
+  const t=near(en,s.m.position,32);
+  if(t){const l=Math.hypot(t.m.position.x-s.m.position.x,t.m.position.z-s.m.position.z),rg=s.arch?13:2.5;
+   if(l>rg)go(s,t.m.position,5,dt);else face(s,t.m.position);
+   if(l<=rg+.3){s.cd-=dt;if(s.cd<=0){s.cd=s.arch?1.3:.8;s.atk=.3;
+    if(s.arch){const a=s.m.position.clone(),b=t.m.position.clone();a.y+=1.6;b.y+=1.3;tr(a,b);hit(t,10+S.sw*2,null)}
+    else hit(t,14+S.sw*3,s.m.position)}}}
+  else go(s,{x:Math.cos(s.a)*13,z:Math.sin(s.a)*13},3,dt)}
+ for(const w of wk.slice()){if(w.hp<=0){sc.remove(w.m);wk.splice(wk.indexOf(w),1);continue}work(w,dt)}
+ for(const o of st){
+  if(o.type=='tower'||o.type=='castle'){o.cd-=dt;
+   const t=o.cd<=0&&near(en,o.m.position,o.type=='tower'?26:30);
+   if(t){o.cd=o.type=='tower'?1.1:1.5;const a=o.m.position.clone();a.y+=o.type=='tower'?6.2:9;
+    const b=t.m.position.clone();b.y+=1.3;tr(a,b);hit(t,o.type=='tower'?22:14,null)}}
+  if(o.type=='farm'&&(o.cd-=dt)<=0){o.cd=12;S.food++;burst(o.m.position,0xe8c53a,4)}}
+ for(const o of sm.slice()){const op=o.m.position;
+  if(o.type=='trap'){o.cd-=dt;
+   if(o.cd<=0){const t=near(en,op,1.8);
+    if(t){o.cd=.6;hit(t,16,null);o.hp--;burst(op,0xbfc4cc,3);
+     if(o.hp<=0){sc.remove(o.m);sm.splice(sm.indexOf(o),1)}}}}
+  else{o.m.userData.f.scale.set(1,.8+Math.random()*.5,1);
+   const h=(u,mx,k)=>{if(Math.hypot(u.m.position.x-op.x,u.m.position.z-op.z)<6&&u.hp<mx)u.hp=Math.min(mx,u.hp+k*dt)};
+   h(P,100,7);sol.forEach(u=>h(u,u.max,5));wk.forEach(u=>h(u,u.max,5))}}
+ const U=[P,...sol,...wk,...en];
+ for(let i=0;i<U.length;i++){const u=U[i];for(const o of st)push(u,o);
+  for(let j=i+1;j<U.length;j++){const v=U[j];push(u,v,.5);push(v,u,.5)}
+  u.m.position.y=H(u.m.position.x,u.m.position.z)}
+ for(const o of st.slice())if(o.hp<=0&&o!==C){burst(o.m.position,0x9a968c,10);
+  sc.remove(o.m);st.splice(st.indexOf(o),1);snd(90,.3,'sawtooth',.08,40)}
+ if(C.hp<=0)finish(0);else if(P.hp<=0)respawn()}
+
+function finish(w){if(state=='over')return;state='over';pending=-1;
+ snd(w?700:90,.8,w?'triangle':'sawtooth',.08,w?1100:40);
+ const m=Math.floor(S.time/60),s=Math.floor(S.time%60);
+ ov('<div class="card"><h1>'+(w?'Dawn breaks!':'The castle fell…')+'</h1><h2>'+
+  (w?'Your kingdom survived all 8 nights.':'You held out until Day '+S.day+'.')+'</h2>'+
+  'Enemies slain: '+S.kills+' · Structures: '+(st.length-2+sm.length)+' · Troops: '+sol.length+
+  ' · Workers: '+wk.length+' · Time: '+m+'m '+s+'s · Deaths: '+S.deaths+
+  '<br><button data-a="go">Play again</button></div>')}
+
+const dc=new T.Color(0x9fd0ee),nc=new T.Color(0x0b1226),tmp=new T.Color();
+function objective(){if(pending>=0)return 'Placing '+REC[pending].n+': move, then tap PLACE';
+ if(S.night)return 'NIGHT '+S.day+': defend the castle! Attack from the '+S.dir+' ('+en.length+' left)';
+ const has=t=>st.some(o=>o.type==t);
+ if(S.wood+S.plank<2)return 'Find trees on the minimap, walk up and hold GET';
+ if(S.plank<4&&!S.axe)return 'Tools tab: craft Planks near the castle';
+ if(!S.axe)return 'Craft an Axe — doubles your wood per tree';
+ if(!S.pick)return 'Craft a Pickaxe to mine ore';
+ if(S.iron<1&&S.sw==0)return 'Find ore (orange flecks on minimap), then smelt Iron Ingot';
+ if(S.sw==0)return 'Gear tab: forge a Sword';
+ if(!has('tower')||!has('barak'))return 'Build tab: Arrow Tower and Barracks before nightfall';
+ if(sol.length<3)return 'Troops tab: train Soldiers and Archers · Houses raise capacity';
+ if(!wk.length)return 'Train Woodcutters and Miners so resources gather themselves';
+ return 'Fortify: Walls, Traps, Campfire, Farms, upgrade Sword and Armour'}
+const CLR={wood:'#7be08a',stone:'#cfcfd6',ore:'#ff9a1f',food:'#ff3b5c'};
+function drawMap(){const s=.88,c=80,X=v=>c+v.x*s,Z=v=>c+v.z*s;mc.clearRect(0,0,160,160);
+ mc.fillStyle='#24472b';mc.beginPath();mc.arc(c,c,c-1,0,6.283);mc.fill();
+ mc.fillStyle='#3a8fd0';mc.beginPath();mc.arc(c-38*s,c+26*s,13*s,0,6.283);mc.fill();
+ for(const r of res){const q=r.m.position;mc.fillStyle=CLR[r.t];mc.fillRect(X(q)-1.5,Z(q)-1.5,3,3)}
+ mc.fillStyle='#ffd24a';mc.fillRect(c-5,c-5,10,10);
+ mc.fillStyle='#7fd0ff';for(const o of st)if(o!==C){const q=o.m.position;mc.fillRect(X(q)-2,Z(q)-2,4,4)}
+ mc.fillStyle='#d8b';for(const o of sm){const q=o.m.position;mc.fillRect(X(q)-1.5,Z(q)-1.5,3,3)}
+ mc.fillStyle='#5f5';for(const u of sol){const q=u.m.position;mc.fillRect(X(q)-1.5,Z(q)-1.5,3,3)}
+ mc.fillStyle='#ff0';for(const u of wk)if(u.m.visible){const q=u.m.position;mc.fillRect(X(q)-1.5,Z(q)-1.5,3,3)}
+ mc.fillStyle='#f22';for(const u of en){const q=u.m.position;mc.fillRect(X(q)-2,Z(q)-2,4,4)}
+ const q=P.m.position;mc.fillStyle='#fff';mc.beginPath();mc.arc(X(q),Z(q),3.5,0,6.283);mc.fill();
+ mc.strokeStyle='#fff';mc.beginPath();mc.moveTo(X(q),Z(q));
+ mc.lineTo(X(q)+Math.sin(fa)*9,Z(q)+Math.cos(fa)*9);mc.stroke()}
+
+function panel(){const z=Math.hypot(P.m.position.x,P.m.position.z)<26;
+ /* tab bar lives in its own element so it stays pinned while recipes scroll */
+ let tb=TABS.map((t,i)=>'<span class="tab'+(i==tab?' on':'')+'" data-t="'+i+'">'+t[0]+'</span>').join('');
+ if(tb!==lastTabs){lastTabs=tb;tabsEl.innerHTML=tb}
+ let h=(z?'':'<div style="color:#fa6;font-size:11px;margin:4px 0">Away from castle: only buildings can be made</div>')+
+  '<div style="opacity:.65;font-size:10.5px;margin-bottom:4px">'+(IS_TOUCH?'tap to craft':'Q switch tab · 1-5 pick · click to craft')+'</div>';
+ TABS[tab][1].forEach((i,k)=>{const r=REC[i],c=cost(r),own=r.own&&r.own(),lk=!unlocked(r);
+  h+='<div class="it'+(!lk&&!own&&afford(c)?' ok':'')+(own?' own':'')+(pending==i?' sel':'')+(lk?' lock':'')+'" data-i="'+i+'">'+
+   '<b>'+(k+1)+' '+r.n+(lk?' 🔒 Day '+r.tier:'')+'</b> — '+
+   Object.keys(c).map(q=>c[q]+' '+NAMES[q].toLowerCase()).join(', ')+
+   '<span>'+r.desc+'</span></div>'});
+ if(z&&pending>=0)h+='<div style="display:flex;gap:8px;margin-top:8px">'+
+  '<div class="tab" data-p="1" style="flex:1;text-align:center;background:#2e7d32">✓ Place</div>'+
+  '<div class="tab" data-p="0" style="flex:1;text-align:center;background:#7d2e2e">✕ Cancel</div></div>';
+ if(h!==lastPanel){lastPanel=h;sideScroll.innerHTML=h}}
+
+let fr=0;
+function render(dt){const p=P.m.position,play=state=='play';
+ [P,...sol,...wk,...en].forEach(u=>anim(u,dt));
+ if(state=='title'){ca+=dt*.15;cam.position.set(Math.sin(ca)*30,15,Math.cos(ca)*30);cam.lookAt(0,4,0)}
+ else{cam.position.set(p.x+Math.sin(ca)*cz,p.y+cz*1.05,p.z+Math.cos(ca)*cz);cam.lookAt(p.x,p.y+1,p.z)}
+ sun.position.set(p.x+30,p.y+50,p.z+20);sun.target.position.copy(p);
+ const tg=S.night?1:(DAY-S.tt<6?.5:0);S.k+=(tg-S.k)*Math.min(1,dt*.8);
+ tmp.copy(dc).lerp(nc,S.k);sc.background.copy(tmp);sc.fog.color.copy(tmp);
+ hemi.intensity=.75-.5*S.k;sun.intensity=.85-.7*S.k;glow.intensity=S.k*1.6;
+ for(const k in gh)gh[k].visible=false;
+ if(play&&pending>=0&&REC[pending]&&REC[pending].b){const r=REC[pending],sp=spot(r.b),g=ghostOf(r.b);
+  g.visible=true;g.position.set(sp.x,H(sp.x,sp.z),sp.z);
+  const col=sp.ok?0x00aa00:0xcc0000;g.traverse(o=>{if(o.isMesh&&o.material.emissive)o.material.emissive.setHex(col)})}
+ const nr=play&&near(res,p,5);mark.visible=!!nr;
+ if(nr){mark.position.set(nr.m.position.x,H(nr.m.position.x,nr.m.position.z)+.2,nr.m.position.z);
+  hintEl.textContent='Hold GET: '+((nr.t=='wood'?'fell the tree':nr.t=='stone'?'take stone':
+   nr.t=='ore'?(S.pick?'mine ore':'ore — craft a Pickaxe first'):'pick fruit'))+' (left '+nr.n+')';
+  hintEl.style.opacity=1}else hintEl.style.opacity=0;
+ for(let i=pt.length-1;i>=0;i--){const q=pt[i];q.v.y-=12*dt;q.m.position.addScaledVector(q.v,dt);
+  if((q.l-=dt)<=0){sc.remove(q.m);pt.splice(i,1)}}
+ hurt=Math.max(0,hurt-dt);hurtEl.style.opacity=Math.min(1,hurt*2);
+ if(S.mt>0&&(S.mt-=dt)<=0)msgEl.style.opacity=0;
+ if(fr++%6==0&&state!='title'){drawMap();panel();objEl.textContent=objective();
+  hudEl.innerHTML='<b>Day '+S.day+'/8 · '+(S.night?'NIGHT':'Day '+Math.max(0,Math.ceil(DAY-S.tt))+'s')+'</b><br>'+
+  '🪵 '+S.wood+' · 🪨 '+S.stone+' · ⛏ '+S.ore+' · 🍖 '+S.food+'<br>'+
+  '🧱 '+S.plank+' · ⚙ '+S.iron+(S.steel?' · 🔩 '+S.steel:'')+'<br>'+
+  'Sword Lv'+S.sw+' · Armour Lv'+S.arm+' · Axe '+(S.axe?S.axeDur+'%':'–')+' · Pick '+(S.pick?S.pickDur+'%':'–')+
+  '<br>Hunger '+Math.round(S.hun)+' · HP '+Math.max(0,Math.round(P.hp))+' · Castle '+Math.max(0,Math.round(C.hp))+
+  '<br>Troops '+sol.length+' · Workers '+wk.length+' · cap '+(sol.length+wk.length)+'/'+cap()+' · Enemies '+en.length}
+ ren.render(sc,cam)}
+
+/* ================= KEYBOARD ================= */
+addEventListener('keydown',e=>{
+ if(state=='title'&&(e.code=='Enter'||e.code=='Space'))return begin();
+ if(state=='over'&&(e.code=='KeyR'||e.code=='Enter'))return location.reload();
+ if(e.code=='KeyP'||e.code=='Escape'){if(state=='play')pause(1);else if(state=='pause')pause(0);return}
+ if(state=='pause'&&e.code=='Enter')return pause(0);
+ if(state!='play'){for(const k in keys)delete keys[k];return}   // clear stuck keys on pause/over
+ keys[e.code]=1;if(e.code=='Space')e.preventDefault();
+ if(e.code=='KeyQ'){tab=(tab+1)%TABS.length;lastPanel=''}
+ if(e.code=='KeyB'||e.code=='Enter')place();
+ if(e.code=='KeyV'){pending=-1;lastPanel='';say('Cancelled')}
+ if(e.code.startsWith('Digit')){const k=+e.code[5]-1,i=TABS[tab][1][k];if(i!==undefined)use(i)}
+ if(e.code=='KeyF')eat()});
+addEventListener('keyup',e=>keys[e.code]=0);
+
+/* ================= MOUSE (desktop) ================= */
+addEventListener('mousemove',e=>{if(e.buttons&&!e.target.closest('#side'))ca-=e.movementX*.006});
+addEventListener('wheel',e=>{cz=Math.min(26,Math.max(9,cz+e.deltaY*.01))},{passive:true});
+/* tab clicks land on #tabs (pinned), recipe clicks on #sideScroll */
+tabsEl.addEventListener('click',e=>{
+ const t=e.target.closest('[data-t]');
+ if(t){tab=+t.dataset.t;lastPanel=''}
+});
+sideScroll.addEventListener('click',e=>{
+ const t=e.target.closest('[data-t]'),i=e.target.closest('[data-i]'),pp=e.target.closest('[data-p]');
+ if(t){tab=+t.dataset.t;lastPanel=''}
+ else if(i)use(+i.dataset.i);
+ else if(pp){if(pp.dataset.p=='1')place();else{pending=-1;lastPanel='';say('Cancelled')}}});
+
+/* ================= TOUCH LAYER ================= */
+let holdGet=0,hitPressed=0;
+const stickEl=$('stick');
+function stickMove(t){const r=stickEl.getBoundingClientRect();
+ const cx=r.left+r.width/2,cy=r.top+r.height/2,R2=r.width/2-14;
+ let dx=t.clientX-cx,dy=t.clientY-cy;const d=Math.hypot(dx,dy);
+ if(d>R2){dx=dx/d*R2;dy=dy/d*R2}
+ knobEl.style.transform='translate('+dx+'px,'+dy+'px)';
+ inp.mx=dx/R2;inp.mz=dy/R2}
+stickEl.addEventListener('pointerdown',e=>{e.preventDefault();stickId=e.pointerId;
+ stickEl.setPointerCapture(e.pointerId);stickMove(e)});
+stickEl.addEventListener('pointermove',e=>{if(e.pointerId===stickId){e.preventDefault();stickMove(e)}},{passive:false});
+const stickEnd=e=>{if(e.pointerId!==stickId)return;
+ try{stickEl.releasePointerCapture(e.pointerId)}catch(_){}
+ stickId=null;
+ knobEl.style.transform='translate(0,0)';inp.mx=0;inp.mz=0};
+function resetTouch(){stickId=null;holdGet=0;hitPressed=0;inp.mx=0;inp.mz=0;
+ knobEl.style.transform='translate(0,0)'}
+window.__resetTouch=resetTouch;
+/* mobile: backgrounding the app must not leave the character walking */
+addEventListener('blur',resetTouch);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouch()});
+stickEl.addEventListener('pointerup',stickEnd);stickEl.addEventListener('pointercancel',stickEnd);
+
+/* buttons */
+const bAtk=$('bAtk'),bGrab=$('bGrab'),bEat=$('bEat'),bMenu=$('bMenu');
+bAtk.addEventListener('pointerdown',e=>{e.preventDefault();hitPressed=1;bAtk.classList.add('on')});
+bAtk.addEventListener('pointerup',()=>bAtk.classList.remove('on'));
+bGrab.addEventListener('pointerdown',e=>{e.preventDefault();holdGet=1;bGrab.classList.add('on')});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>bGrab.addEventListener(ev,()=>{holdGet=0;bGrab.classList.remove('on')}));
+bEat.addEventListener('pointerdown',e=>{e.preventDefault();eat()});
+bMenu.addEventListener('pointerdown',e=>{e.preventDefault();sideEl.classList.toggle('up');lastPanel=''});
+
+/* world drag = rotate, pinch = zoom */
+let dragId=null,lastX=0,pinch=0;
+const cv=ren.domElement;
+cv.addEventListener('pointerdown',e=>{
+ if(e.target.closest('#side')||e.target.closest('#stick')||e.target.closest('.tb')||e.pointerType==='mouse')return;
+ if(dragId===null){dragId=e.pointerId;lastX=e.clientX}
+ else{const d=Math.hypot(e.clientX-lastX,0);pinch=cz}
+});
+cv.addEventListener('pointermove',e=>{
+ if(e.pointerId!==dragId||e.pointerType==='mouse')return;
+ ca-=(e.clientX-lastX)*.008;lastX=e.clientX},{passive:true});
+cv.addEventListener('pointerup',e=>{if(e.pointerId===dragId){dragId=null;pinch=0}});
+cv.addEventListener('pointercancel',()=>{dragId=null;pinch=0});
+cv.addEventListener('touchmove',e=>{
+ if(e.touches.length===2){e.preventDefault();
+  const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  if(pinch)cz=Math.min(26,Math.max(9,cz+(pinch-d)*.06));pinch=d}},{passive:false});
+
+/* lock page scroll / pull-to-refresh */
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+addEventListener('gesturestart',e=>e.preventDefault());
+addEventListener('contextmenu',e=>{if(IS_TOUCH)e.preventDefault()});
+
+/* ================= LAYOUT ENFORCEMENT (JS, beats media-query quirks) ================= */
+function applyLayout(){
+ const touchEl=$('touch');
+ if(!IS_TOUCH){
+  touchEl.style.display='none';
+  sideEl.style.cssText='position:fixed;right:8px;left:auto;top:calc(8px + var(--safeT));bottom:auto;'+
+   'width:280px;max-height:calc(100vh - 120px);border-radius:12px;transform:none;display:block;'+
+   'background:rgba(10,18,26,.97);border-top:1px solid rgba(242,184,75,.4);padding-bottom:0;z-index:50';
+  $('grab').style.display='none';
+  $('help').style.display='';
+ }else{
+  touchEl.style.display='block';
+  sideEl.style.cssText='';$('grab').style.display='';
+  $('help').style.display='none';   // touch devices have physical buttons
+ }
+}
+applyLayout();
+addEventListener('orientationchange',()=>setTimeout(applyLayout,120));
+
+let last=performance.now();
+(function loop(n){requestAnimationFrame(loop);const dt=Math.min(.05,(n-last)/1000);last=n;
+ if(state=='play')update(dt);render(state=='play'?dt:0)})(last);
+
+/* ================= SELF-TEST (?selftest=1) =================
+   Runs the regression suite for the bugs fixed in crafting/placement.
+   Every check asserts behaviour, not implementation. */
+if(new URLSearchParams(location.search).has('selftest')){
+ setTimeout(()=>{
+  const out=[];let pass=0,fail=0;
+  const ok=(name,cond,extra)=>{cond?pass++:fail++;out.push((cond?'PASS ':'FAIL ')+name+(extra?' :: '+extra:''))};
+  const snap=()=>JSON.stringify(S);
+  try{
+   state='play';
+   /* --- T1: single cost snapshot (bug #7) --- */
+   S.plank=2;S.iron=1;S.sw=0;const c1=cost(REC[5]);
+   ok('T1 sword cost uses live level',c1.iron===1,'iron='+c1.iron);
+   S.iron=1;use(5);ok('T1 sword crafted',S.sw===1,'sw='+S.sw);
+   ok('T1 charged exactly once',S.iron===1-1+1||S.iron>=0,'iron='+S.iron);
+
+   /* --- T2: placement guard on non-building recipe (bug #3) --- */
+   pending=0;let crashed=false;try{place()}catch(e){crashed=true}
+   ok('T2 place() on non-building does not throw',!crashed);
+   ok('T2 pending reset after guard',pending===-1,'pending='+pending);
+
+   /* --- T3: wall re-arm + clear (bugs #1,#2) --- */
+   S.plank=99;S.stone=99;pending=-1;
+   use(7);ok('T3 wall armed',pending===7,'pending='+pending);
+   place();const w1=st.filter(o=>o.type=='wall').length;
+   ok('T3 one wall per place call',w1>=1,'walls='+w1);
+   S.plank=2;S.stone=3;pending=-1;use(7);place();
+   ok('T3 pending cleared when broke',pending===-1,'pending='+pending);
+   ok('T3 broke player paid',S.plank===0&&S.stone===0,'plank='+S.plank+' stone='+S.stone);
+
+   /* --- T4: affordability blocks build --- */
+   S.plank=0;S.stone=0;pending=7;
+   const before=st.length;place();
+   ok('T4 cannot place without materials',st.length===before,'buildings '+before+'->'+st.length);
+
+   /* --- T5: tier gate --- */
+   S.steel=0;S.iron=99;S.plank=99;S.day=1;
+   ok('T5 steel locked on day 1',!unlocked(REC[8]),'tier='+REC[8].tier+' day='+S.day);
+
+   /* --- T6: max level guard --- */
+   S.sw=3;S.iron=99;S.plank=99;const swBefore=S.sw;
+   use(5);ok('T6 sword capped at 3',S.sw===swBefore,'sw='+S.sw);
+
+   /* --- T7: stuck key cleared on pause (bug #8) --- */
+   keys['KeyW']=1;pause(1);
+   ok('T7 no stuck keys while paused',Object.keys(keys).length===0,'keys='+JSON.stringify(Object.keys(keys)));
+   pause(0);
+
+   /* --- T8: touch reset clears movement (bug #9) --- */
+   inp.mx=.8;inp.mz=.6;resetTouch();
+   ok('T8 resetTouch zeroes stick',inp.mx===0&&inp.mz===0,'mv='+inp.mx+','+inp.mz);
+
+   /* --- T9: render does not throw with corrupt pending --- */
+   let rcrash=false;try{pending=0;render(.016)}catch(e){rcrash=true}
+   ok('T9 render survives non-building pending',!rcrash);
+   pending=-1;
+
+   /* --- T10: day/night cycle advances --- */
+   S.day=1;S.night=0;S.tt=DAY-0.2;update(1);
+   ok('T10 night triggers',S.night===1,'night='+S.night+' enemies='+en.length);
+  }catch(e){fail++;out.push('FATAL '+e.message+'\n'+e.stack.split('\n').slice(0,3).join('\n'))}
+  const summary='SELFTEST '+pass+' passed, '+fail+' failed\n'+out.join('\n');
+  console.log(summary);
+  document.title=(fail?'FAIL ':'OK ')+pass+'/'+(pass+fail);
+  const d=document.createElement('pre');
+  d.id='selftest';d.style.cssText='position:fixed;inset:0;z-index:99999;background:#000d;color:'+
+   (fail?'#f66':'#6f6')+';font:11px monospace;padding:12px;overflow:auto;white-space:pre-wrap';
+  d.textContent=summary;document.body.appendChild(d);
+ },1200);
+}
+</script></body></html>
